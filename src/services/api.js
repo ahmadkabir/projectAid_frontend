@@ -72,7 +72,7 @@ export const ordersAPI = {
   create: (data) => api.post('/orders', data),
   processPayment: (orderId, data) => api.post(`/orders/${orderId}/payment`, data),
   getUserOrders: () => api.get('/orders'),
-  getAllOrders: () => api.get('/orders/all'),
+  getAllOrders: (params) => api.get('/orders/all', { params }),
   getById: (id) => api.get(`/orders/${id}`)
 };
 
