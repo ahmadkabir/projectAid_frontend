@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { usersAPI } from '../../services/api';
+import { usersAPI, getAvatarUrl } from '../../services/api';
 import Loading from '../../components/common/Loading';
 import {
   User,
@@ -11,7 +11,9 @@ import {
   Save,
   ShieldCheck,
   BadgeCheck,
-  CalendarDays
+  CalendarDays,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -30,6 +32,43 @@ const Profile = () => {
   });
   const [showPasswords, setShowPasswords] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarInputRef = useRef(null);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [user?.profileImage]);
+
+  const handleImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return toast.error('Please choose a JPEG, PNG, GIF or WebP image');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error('Image must be smaller than 5 MB');
+    }
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const response = await usersAPI.uploadProfileImage(formData);
+      const updated = response.data?.user;
+      if (updated) syncUser(updated);
+      toast.success(response.data?.message || 'Profile image updated');
+    } catch (error) {
+      const data = error.response?.data;
+      toast.error(data?.message || 'Failed to upload profile image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -141,14 +180,48 @@ const Profile = () => {
     .join('')
     .toUpperCase();
 
+  const avatarUrl = getAvatarUrl(user?.profileImage);
+
   return (
     <div className="bg-gray-50">
       {/* Profile Header */}
       <div className="bg-gradient-to-r from-primary-blue to-primary-blue-light text-white -mt-24 md:-mt-28 pt-24 md:pt-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-            <div className="bg-white/20 backdrop-blur-sm w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold shrink-0">
-              {initials}
+            <div className="relative shrink-0">
+              <div className="bg-white/20 backdrop-blur-sm w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold overflow-hidden">
+                {avatarUrl && !avatarFailed ? (
+                  <img
+                    src={avatarUrl}
+                    alt={`${user?.name || 'User'} avatar`}
+                    onError={() => setAvatarFailed(true)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingImage}
+                title="Upload a new profile photo"
+                aria-label="Upload profile photo"
+                className="absolute -bottom-1 -right-1 bg-white text-primary-blue hover:bg-primary-blue hover:text-white rounded-full p-2 shadow-md transition-colors disabled:opacity-50 disabled:cursor-wait"
+              >
+                {uploadingImage ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Camera size={16} />
+                )}
+              </button>
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3">

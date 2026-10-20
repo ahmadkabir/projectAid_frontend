@@ -33,8 +33,13 @@ api.interceptors.response.use(
                           error.config?.url?.includes('/auth/register');
     
     if (error.response?.status === 401 && !isAuthEndpoint) {
-      // Only redirect if not already on login page
-      if (window.location.pathname !== '/login') {
+      // The session check (auth/me) runs on every page load. A 401 there only
+      // means the stored token is stale: AuthContext clears it and the visitor
+      // continues as a guest, so public pages (project details, catalog,
+      // preview) stay readable instead of throwing the user to /login.
+      const isSessionProbe = error.config?.url?.includes('/auth/me');
+
+      if (!isSessionProbe && window.location.pathname !== '/login') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -58,6 +63,7 @@ export const authAPI = {
 export const projectsAPI = {
   getAll: (params) => api.get('/projects', { params }),
   getById: (id) => api.get(`/projects/${id}`),
+  getDocumentPreview: (id) => api.get(`/projects/${id}/document-preview`),
   create: (formData) => api.post('/projects', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -92,11 +98,20 @@ export const usersAPI = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data) => api.put('/users/profile', data),
   changePassword: (data) => api.put('/users/profile/password', data),
+  uploadProfileImage: (formData) => api.put('/users/profile/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   getAll: () => api.get('/users'),
   getById: (id) => api.get(`/users/${id}`),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`)
 };
+
+// Full URL for a user's avatar filename, or null when none is set
+export const getAvatarUrl = (profileImage) =>
+  profileImage
+    ? `${API_URL.replace('/api', '')}/uploads/avatars/${profileImage}`
+    : null;
 
 // Analytics API (Admin only)
 export const analyticsAPI = {

@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Download,
   Lock,
+  Eye,
   MessageSquare,
   ArrowLeft,
   Target,
@@ -24,7 +25,7 @@ import {
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState(null);
@@ -37,10 +38,17 @@ const ProjectDetails = () => {
 
   useEffect(() => {
     fetchProject();
-    if (user) {
+  }, [id]);
+
+  useEffect(() => {
+    // Wait until the session check has settled. AuthContext seeds `user` from
+    // localStorage immediately, so requesting orders straight away would fire
+    // an authenticated call with a stale token — that 401 used to bounce
+    // signed-out visitors off this public page to /login.
+    if (!authLoading && user) {
       fetchUserOrders();
     }
-  }, [id, user]);
+  }, [id, authLoading, user]);
 
   const fetchProject = async () => {
     try {
@@ -334,34 +342,43 @@ const ProjectDetails = () => {
                           <p className="text-sm text-gray-600">Complete PDF documentation including requirements, design, and implementation details</p>
                         </div>
                       </div>
-                      {hasPurchased('documentation') && (project.documentationFile || documentFiles.length > 0) ? (
-                        <div className="flex flex-col gap-2">
-                          {project.documentationFile && (
-                            <button
-                              onClick={() => downloadFile(project.documentationFile, 'documentation')}
-                              className="inline-flex items-center space-x-2 bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-                            >
-                              <Download size={18} />
-                              <span>Download</span>
-                            </button>
-                          )}
-                          {documentFiles.map((file) => (
-                            <button
-                              key={file.id}
-                              onClick={() => downloadFile(file.filePath, null, true)}
-                              className="inline-flex items-center space-x-2 bg-primary-blue hover:bg-primary-green text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-                            >
-                              <Download size={18} />
-                              <span>{file.fileType?.toUpperCase() || 'DOC'}</span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2 text-gray-400">
-                          <Lock size={20} />
-                          <span className="text-sm">Locked</span>
-                        </div>
-                      )}
+                      <div className="flex flex-col items-end gap-2">
+                        <Link
+                          to={`/projects/${project.id}/preview`}
+                          className="inline-flex items-center space-x-2 border-2 border-primary-blue text-primary-blue hover:bg-primary-blue hover:text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                        >
+                          <Eye size={18} />
+                          <span>View Doc</span>
+                        </Link>
+                        {hasPurchased('documentation') && (project.documentationFile || documentFiles.length > 0) ? (
+                          <div className="flex flex-col items-end gap-2">
+                            {project.documentationFile && (
+                              <button
+                                onClick={() => downloadFile(project.documentationFile, 'documentation')}
+                                className="inline-flex items-center space-x-2 bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                              >
+                                <Download size={18} />
+                                <span>Download</span>
+                              </button>
+                            )}
+                            {documentFiles.map((file) => (
+                              <button
+                                key={file.id}
+                                onClick={() => downloadFile(file.filePath, null, true)}
+                                className="inline-flex items-center space-x-2 bg-primary-blue hover:bg-primary-green text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                              >
+                                <Download size={18} />
+                                <span>{file.fileType?.toUpperCase() || 'DOC'}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 text-gray-400">
+                            <Lock size={20} />
+                            <span className="text-sm">Locked</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

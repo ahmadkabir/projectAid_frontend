@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ScrollToTop from './components/common/ScrollToTop';
 
 // Layouts
 import AdminLayout from './app/admin/layout/AdminLayout';
@@ -26,6 +27,7 @@ import AdminSupport from './pages/Dashboard/AdminSupport';
 import Home from './pages/Home/Home';
 import Projects from './pages/Projects/Projects';
 import ProjectDetails from './pages/ProjectDetails/ProjectDetails';
+import DocumentPreview from './pages/ProjectDetails/DocumentPreview';
 import Dashboard from './pages/Dashboard/Dashboard';
 import MyOrders from './pages/Dashboard/MyOrders';
 import SupportRequests from './pages/Dashboard/SupportRequests';
@@ -89,8 +91,18 @@ function AppRoutes() {
       <Route
         path="/projects/:id"
         element={
+          <PrivateRoute>
+            <PageLayout>
+              <ProjectDetails />
+            </PageLayout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/projects/:id/preview"
+        element={
           <PageLayout>
-            <ProjectDetails />
+            <DocumentPreview />
           </PageLayout>
         }
       />
@@ -236,6 +248,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
+        <ScrollToTop />
         <AuthProvider>
           <AppRoutes />
           <Toaster position="top-right" />

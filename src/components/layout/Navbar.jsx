@@ -1,8 +1,43 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getAvatarUrl } from '../../services/api';
 import logo from '../../assets/logo.png';
-import { Menu, X } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Home,
+  FolderKanban,
+  LayoutDashboard,
+  ShieldCheck,
+  CircleUser,
+  LogIn,
+  UserPlus,
+  LogOut
+} from 'lucide-react';
+
+const UserAvatar = ({ user, size = 30, className = '' }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const src = getAvatarUrl(user?.profileImage);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [user?.profileImage]);
+
+  if (!src || imgFailed) {
+    return <CircleUser size={size} className={className} />;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={`${user?.name || 'User'} avatar`}
+      onError={() => setImgFailed(true)}
+      style={{ width: size, height: size }}
+      className={`rounded-full object-cover border-2 border-primary-blue/30 ${className}`}
+    />
+  );
+};
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -29,6 +64,9 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
+  const linkClass =
+    'text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5';
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 h-16 bg-white/90 backdrop-blur-md shadow-sm transition-all duration-300 w-full`}
@@ -52,16 +90,12 @@ const Navbar = () => {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex ml-8 items-center space-x-1 h-full">
-              <Link
-                to="/"
-                className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors h-full flex items-center"
-              >
+              <Link to="/" className={`${linkClass} h-full`}>
+                <Home size={16} />
                 Home
               </Link>
-              <Link
-                to="/projects"
-                className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors h-full flex items-center"
-              >
+              <Link to="/projects" className={`${linkClass} h-full`}>
+                <FolderKanban size={16} />
                 Projects
               </Link>
             </div>
@@ -72,45 +106,42 @@ const Navbar = () => {
             {user ? (
               <>
                 {isAdmin() && (
-                  <Link
-                    to="/admin"
-                    className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
+                  <Link to="/admin" className={linkClass}>
+                    <ShieldCheck size={16} />
                     Admin
                   </Link>
                 )}
-                <Link
-                  to="/dashboard"
-                  className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
+                <Link to="/dashboard" className={linkClass}>
+                  <LayoutDashboard size={16} />
                   Dashboard
                 </Link>
                 <Link
                   to="/dashboard/profile"
-                  className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={`${linkClass} px-2`}
+                  title={`Profile — ${user.name}`}
+                  aria-label="Profile"
                 >
-                  Profile
+                  <UserAvatar user={user} size={30} />
                 </Link>
-                <span className="text-gray-700 text-sm font-medium">Hello, {user.name}</span>
                 <button
                   onClick={handleLogout}
-                  className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm hover:shadow-md h-9 flex items-center"
+                  className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm hover:shadow-md h-9 flex items-center gap-1.5"
                 >
+                  <LogOut size={16} />
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
+                <Link to="/login" className={linkClass}>
+                  <LogIn size={16} />
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+                  className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm hover:shadow-md flex items-center gap-1.5"
                 >
+                  <UserPlus size={16} />
                   Sign Up
                 </Link>
               </>
@@ -131,69 +162,58 @@ const Navbar = () => {
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
             <div className="flex flex-col space-y-1 p-4">
-              <Link
-                to="/"
-                onClick={closeMobileMenu}
-                className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
+              <Link to="/" onClick={closeMobileMenu} className={linkClass}>
+                <Home size={16} />
                 Home
               </Link>
-              <Link
-                to="/projects"
-                onClick={closeMobileMenu}
-                className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
+              <Link to="/projects" onClick={closeMobileMenu} className={linkClass}>
+                <FolderKanban size={16} />
                 Projects
               </Link>
               {user ? (
                 <>
                   {isAdmin() && (
-                    <Link
-                      to="/admin"
-                      onClick={closeMobileMenu}
-                      className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
+                    <Link to="/admin" onClick={closeMobileMenu} className={linkClass}>
+                      <ShieldCheck size={16} />
                       Admin
                     </Link>
                   )}
-                  <Link
-                    to="/dashboard"
-                    onClick={closeMobileMenu}
-                    className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
+                  <Link to="/dashboard" onClick={closeMobileMenu} className={linkClass}>
+                    <LayoutDashboard size={16} />
                     Dashboard
                   </Link>
                   <Link
                     to="/dashboard/profile"
                     onClick={closeMobileMenu}
-                    className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className={linkClass}
+                    aria-label="Profile"
                   >
+                    <UserAvatar user={user} size={20} />
                     Profile
                   </Link>
-                  <div className="px-3 py-2 text-sm text-gray-700">
-                    Hello, {user.name}
+                  <div className="px-3 py-2 text-sm text-gray-700 flex items-center gap-2">
+                    <span className="font-medium">Hello, {user.name}</span>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-left"
+                    className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-left flex items-center gap-1.5"
                   >
+                    <LogOut size={16} />
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link
-                    to="/login"
-                    onClick={closeMobileMenu}
-                    className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
+                  <Link to="/login" onClick={closeMobileMenu} className={linkClass}>
+                    <LogIn size={16} />
                     Login
                   </Link>
                   <Link
                     to="/register"
                     onClick={closeMobileMenu}
-                    className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-left"
+                    className="bg-primary-green hover:bg-primary-green/90 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-left flex items-center gap-1.5"
                   >
+                    <UserPlus size={16} />
                     Sign Up
                   </Link>
                 </>
