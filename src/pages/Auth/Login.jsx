@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Eye, EyeOff, Mail, Lock, LogIn } from 'lucide-react';
+import { authAPI } from '../../services/api';
+import { Eye, EyeOff, Mail, Lock, LogIn, MailWarning, Send } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import toast from 'react-hot-toast';
 
@@ -9,8 +10,27 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState(null);
+  const [resending, setResending] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleResend = async () => {
+    if (!unverifiedEmail || resending) return;
+    setResending(true);
+    try {
+      const res = await authAPI.resendVerification(unverifiedEmail);
+      toast.success(res.data?.message || 'Verification email sent.');
+      if (res.data?.verificationUrl) {
+        // Dev console mode: backend returned the link directly
+        window.open(res.data.verificationUrl, '_blank');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Could not resend verification email.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,6 +48,8 @@ const Login = () => {
             navigate('/dashboard');
           }
         }, 200);
+      } else if (result.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(result.email || formData.email);
       }
     } catch (error) {
       console.error('Login submission error:', error);
@@ -148,6 +170,35 @@ const Login = () => {
                 </>
               )}
             </button>
+
+            {/* Email not verified notice */}
+            {unverifiedEmail && (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 flex gap-3" data-testid="unverified-notice">
+                <MailWarning className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold">Email not verified</p>
+                  <p className="mt-1">
+                    We sent a verification link to <span className="font-medium">{unverifiedEmail}</span>.
+                    Please confirm your address to sign in.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    className="mt-2 inline-flex items-center gap-1.5 font-semibold text-primary-blue hover:text-primary-blue-light disabled:opacity-50"
+                  >
+                    {resending ? (
+                      <span>Sending...</span>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        <span>Resend verification email</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
 
           {/* Registration Link */}

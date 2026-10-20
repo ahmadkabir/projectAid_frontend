@@ -10,6 +10,7 @@ import PageLayout from './components/layout/PageLayout';
 // Auth Pages
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
+import VerifyEmail from './pages/Auth/VerifyEmail';
 
 // Admin Pages
 import AdminDashboard from './app/admin/dashboard/AdminDashboard';
@@ -28,6 +29,7 @@ import ProjectDetails from './pages/ProjectDetails/ProjectDetails';
 import Dashboard from './pages/Dashboard/Dashboard';
 import MyOrders from './pages/Dashboard/MyOrders';
 import SupportRequests from './pages/Dashboard/SupportRequests';
+import Profile from './pages/Dashboard/Profile';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -65,6 +67,7 @@ function AppRoutes() {
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       
       {/* Public Landing & Projects */}
       <Route
@@ -211,6 +214,16 @@ function AppRoutes() {
           <PrivateRoute>
             <PageLayout>
               <SupportRequests />
+            </PageLayout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/dashboard/profile"
+        element={
+          <PrivateRoute>
+            <PageLayout>
+              <Profile />
             </PageLayout>
           </PrivateRoute>
         }

@@ -83,6 +83,17 @@ export const AuthProvider = ({ children }) => {
         // Server responded with error
         if (error.response.status === 401) {
           message = 'Invalid email or password';
+        } else if (
+          error.response.status === 403 &&
+          error.response.data?.code === 'EMAIL_NOT_VERIFIED'
+        ) {
+          // Let the login page show the "verify your email" notice with a resend option
+          return {
+            success: false,
+            code: 'EMAIL_NOT_VERIFIED',
+            email,
+            error: error.response.data.message
+          };
         } else if (error.response.data?.errors) {
           message = error.response.data.errors[0]?.msg || 'Login failed';
         } else {
@@ -104,14 +115,11 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const response = await authAPI.register({ name, email, password });
-      const { token, user } = response.data;
+      const { verificationUrl } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-      
-      toast.success('Registration successful!');
-      return { success: true };
+      // No auto-login: the account must be verified via the emailed link first
+      toast.success('Verification email sent. Please check your inbox.');
+      return { success: true, email, verificationUrl };
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed';
       toast.error(message);
@@ -126,6 +134,12 @@ export const AuthProvider = ({ children }) => {
     toast.success('Logged out successfully');
   };
 
+  // Keeps context + localStorage in sync after a profile edit
+  const syncUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   const isAdmin = () => {
     try {
       return user?.role === 'admin';
@@ -136,7 +150,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin, syncUser }}>
       {children}
     </AuthContext.Provider>
   );

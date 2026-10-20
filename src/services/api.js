@@ -49,7 +49,9 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
-  getMe: () => api.get('/auth/me')
+  getMe: () => api.get('/auth/me'),
+  verifyEmail: (token) => api.post('/auth/verify-email', { token }),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email })
 };
 
 // Projects API
@@ -87,6 +89,9 @@ export const supportAPI = {
 
 // Users API
 export const usersAPI = {
+  getProfile: () => api.get('/users/profile'),
+  updateProfile: (data) => api.put('/users/profile', data),
+  changePassword: (data) => api.put('/users/profile/password', data),
   getAll: () => api.get('/users'),
   getById: (id) => api.get(`/users/${id}`),
   update: (id, data) => api.put(`/users/${id}`, data),

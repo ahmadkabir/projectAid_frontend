@@ -11,11 +11,10 @@ export default defineConfig({
     port: 5173,
     host: '127.0.0.1',
     strictPort: false,
-    hmr: {
-      protocol: 'ws',
-      host: '127.0.0.1',
-      port: 5173
-    },
+    // No hardcoded hmr.port: it must follow the port the server actually
+    // binds to. Pinning it made the HMR websocket dial the wrong server
+    // whenever 5173 was taken, which made Vite full-reload the page every
+    // second ("server connection lost. Polling for restart...").
     proxy: {
       '/api': {
         target: 'http://localhost:5001',

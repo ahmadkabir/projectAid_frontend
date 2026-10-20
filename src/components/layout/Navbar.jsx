@@ -85,6 +85,12 @@ const Navbar = () => {
                 >
                   Dashboard
                 </Link>
+                <Link
+                  to="/dashboard/profile"
+                  className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Profile
+                </Link>
                 <span className="text-gray-700 text-sm font-medium">Hello, {user.name}</span>
                 <button
                   onClick={handleLogout}
@@ -156,6 +162,13 @@ const Navbar = () => {
                     className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     Dashboard
+                  </Link>
+                  <Link
+                    to="/dashboard/profile"
+                    onClick={closeMobileMenu}
+                    className="text-primary-blue hover:text-primary-green px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Profile
                   </Link>
                   <div className="px-3 py-2 text-sm text-gray-700">
                     Hello, {user.name}
