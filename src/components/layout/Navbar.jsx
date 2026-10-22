@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getAvatarUrl } from '../../services/api';
+import UserAvatar from '../common/UserAvatar';
 import logo from '../../assets/logo.png';
 import {
   Menu,
@@ -10,34 +10,10 @@ import {
   FolderKanban,
   LayoutDashboard,
   ShieldCheck,
-  CircleUser,
   LogIn,
   UserPlus,
   LogOut
 } from 'lucide-react';
-
-const UserAvatar = ({ user, size = 30, className = '' }) => {
-  const [imgFailed, setImgFailed] = useState(false);
-  const src = getAvatarUrl(user?.profileImage);
-
-  useEffect(() => {
-    setImgFailed(false);
-  }, [user?.profileImage]);
-
-  if (!src || imgFailed) {
-    return <CircleUser size={size} className={className} />;
-  }
-
-  return (
-    <img
-      src={src}
-      alt={`${user?.name || 'User'} avatar`}
-      onError={() => setImgFailed(true)}
-      style={{ width: size, height: size }}
-      className={`rounded-full object-cover border-2 border-primary-blue/30 ${className}`}
-    />
-  );
-};
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -121,7 +97,7 @@ const Navbar = () => {
                   title={`Profile — ${user.name}`}
                   aria-label="Profile"
                 >
-                  <UserAvatar user={user} size={30} />
+                  <UserAvatar user={user} size={30} className="border-2 border-primary-blue/30" />
                 </Link>
                 <button
                   onClick={handleLogout}

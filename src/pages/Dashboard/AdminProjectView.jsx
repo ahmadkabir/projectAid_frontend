@@ -1,10 +1,51 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { projectsAPI } from '../../services/api';
+import { projectsAPI, downloadProjectFile } from '../../services/api';
 import Loading from '../../components/common/Loading';
+import StatusBadge from '../../components/admin/StatusBadge';
 import TableOfContents from '../../components/common/TableOfContents';
-import { ArrowLeft, Download, Calendar, Tag, DollarSign, FileText, Image as ImageIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  Download,
+  Calendar,
+  Tag,
+  DollarSign,
+  FileText,
+  Image as ImageIcon,
+  Package,
+  History,
+  ShieldCheck
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+
+const formatSize = (bytes) => {
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const FileRow = ({ file, label }) => (
+  <div className="flex flex-col gap-3 p-4 bg-admin-bg rounded-lg border border-admin-border sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex items-center space-x-3">
+      <FileText className="text-admin-blue" size={24} />
+      <div>
+        <p className="font-semibold text-admin-text">{label}</p>
+        <p className="text-sm text-admin-muted">
+          {file.originalName || file.fileName}
+          {file.fileSize ? ` · ${formatSize(file.fileSize)}` : ''}
+          {file.fileType ? ` · ${file.fileType.toUpperCase()}` : ''}
+        </p>
+      </div>
+    </div>
+    <button
+      onClick={() => downloadProjectFile(file)}
+      className="flex items-center justify-center space-x-2 px-4 py-2 bg-admin-blue text-white rounded-lg hover:bg-admin-blue-hover transition-colors"
+    >
+      <Download size={18} />
+      <span>Download</span>
+    </button>
+  </div>
+);
 
 const AdminProjectView = () => {
   const { id } = useParams();
@@ -14,6 +55,7 @@ const AdminProjectView = () => {
 
   useEffect(() => {
     fetchProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchProject = async () => {
@@ -21,7 +63,7 @@ const AdminProjectView = () => {
       setLoading(true);
       const response = await projectsAPI.getById(id);
       setProject(response.data.project);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load project');
       navigate('/admin/projects');
     } finally {
@@ -29,271 +71,240 @@ const AdminProjectView = () => {
     }
   };
 
-  const handleDownload = (filename, type) => {
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
-    const url = type === 'documentation' 
-      ? `${baseUrl}/uploads/documentation/${filename}`
-      : `${baseUrl}/uploads/thumbnails/${filename}`;
-    
-    window.open(url, '_blank');
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (value) => {
+    if (!value) return 'N/A';
+    return new Date(value).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
   };
 
-  const handleDocumentDownload = (filePath) => {
-    if (!filePath) return;
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
-    const normalized = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-    window.open(`${baseUrl}/${normalized}`, '_blank');
-  };
-
   if (loading) return <Loading />;
   if (!project) return null;
 
-  const projectType = project.projectType || 'documentation';
-  const documentFiles = project.documentFiles || [];
+  const files = project.files || [];
+  const currentFiles = files.filter((file) => file.isCurrent);
+  const historyFiles = files.filter((file) => !file.isCurrent);
   const thumbnailUrl = project.thumbnail
     ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}/uploads/thumbnails/${project.thumbnail}`
     : null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
+    <div className="max-w-7xl mx-auto">
       <div className="mb-6">
         <Link
           to="/admin/projects"
-          className="inline-flex items-center space-x-2 text-primary-blue hover:text-primary-green transition-colors mb-4"
+          className="inline-flex items-center space-x-2 text-admin-blue hover:text-admin-blue-hover transition-colors"
         >
           <ArrowLeft size={20} />
           <span>Back to Projects</span>
         </Link>
-        <h1 className="text-3xl font-bold text-primary-blue">Project Details</h1>
       </div>
 
-      {/* Project Information Card */}
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      <div className="card p-6 mb-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Column - Main Info */}
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-primary-blue mb-4">{project.title}</h2>
-            
-            {/* Description */}
+            <h2 className="text-2xl font-bold text-admin-blue mb-4">{project.title}</h2>
+
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Description</h3>
-              <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
+              <h3 className="text-lg font-semibold text-admin-text mb-2">Description</h3>
+              <p className="text-admin-muted whitespace-pre-wrap leading-relaxed">
                 {project.description || project.summary || 'No description available'}
               </p>
             </div>
 
-            {/* Summary if available */}
             {project.summary && project.summary !== project.description && (
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Summary</h3>
-                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
-                  {project.summary}
-                </p>
+                <h3 className="text-lg font-semibold text-admin-text mb-2">Summary</h3>
+                <p className="text-admin-muted whitespace-pre-wrap leading-relaxed">{project.summary}</p>
               </div>
             )}
 
-            {/* Objective if available */}
             {project.objective && (
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Objective</h3>
-                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
-                  {project.objective}
-                </p>
-              </div>
-            )}
-
-            {/* Features if available */}
-            {project.features && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Features</h3>
-                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
-                  {project.features}
-                </p>
+                <h3 className="text-lg font-semibold text-admin-text mb-2">Objective</h3>
+                <p className="text-admin-muted whitespace-pre-wrap leading-relaxed">{project.objective}</p>
               </div>
             )}
           </div>
 
-          {/* Right Column - Metadata */}
           <div className="lg:w-80">
-            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-              {/* Thumbnail */}
+            <div className="bg-admin-bg rounded-lg p-4 space-y-4">
               {thumbnailUrl && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                  <h3 className="text-sm font-semibold text-admin-text mb-2 flex items-center space-x-2">
                     <ImageIcon size={16} />
-                    <span>Thumbnail</span>
+                    <span>Cover image</span>
                   </h3>
                   <img
                     src={thumbnailUrl}
                     alt={project.title}
-                    className="w-full h-48 object-cover rounded-lg border border-gray-200"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
+                    className="w-full h-48 object-cover rounded-lg border border-admin-border"
+                    onError={(event) => { event.target.style.display = 'none'; }}
                   />
                 </div>
               )}
 
-              {/* Course */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                <h3 className="text-sm font-semibold text-admin-text mb-2 flex items-center space-x-2">
                   <Tag size={16} />
                   <span>Course</span>
                 </h3>
-                <p className="text-gray-600">{project.category?.name || 'N/A'}</p>
+                <p className="text-admin-muted">{project.category?.name || 'N/A'}</p>
               </div>
 
-              {/* Category/Type */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                <h3 className="text-sm font-semibold text-admin-text mb-2 flex items-center space-x-2">
                   <Tag size={16} />
                   <span>Category</span>
                 </h3>
                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  projectType === 'software' 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-green-100 text-green-800'
+                  project.hasSoftware ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                 }`}>
-                  {projectType === 'software' ? 'Software' : 'Documentation'}
+                  {project.hasSoftware ? 'Documentation + Software' : 'Documentation only'}
                 </span>
               </div>
 
-              {/* Status */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Status</h3>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  project.status === 'active' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {project.status === 'active' ? 'Active' : 'Inactive'}
-                </span>
+                <h3 className="text-sm font-semibold text-admin-text mb-2">Status</h3>
+                <StatusBadge status={project.status} />
               </div>
 
-              {/* Price */}
-              {project.price && parseFloat(project.price) > 0 && (
+              {(project.level || project.institution) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
-                    <DollarSign size={16} />
-                    <span>Price</span>
-                  </h3>
-                  <p className="text-gray-600 font-bold text-lg">₦{parseFloat(project.price).toFixed(2)}</p>
+                  <h3 className="text-sm font-semibold text-admin-text mb-2">Academic details</h3>
+                  <p className="text-admin-muted text-sm">
+                    {[project.level, project.institution].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
               )}
 
-              {/* Created Date */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                <h3 className="text-sm font-semibold text-admin-text mb-2 flex items-center space-x-2">
+                  <DollarSign size={16} />
+                  <span>Pricing</span>
+                </h3>
+                <p className="text-admin-muted text-sm">
+                  Documentation: ₦{parseFloat(project.documentationPrice || project.price || 0).toFixed(2)}
+                </p>
+                {project.hasSoftware && (
+                  <p className="text-admin-muted text-sm">
+                    Software:{' '}
+                    {project.softwareSaleMode === 'included'
+                      ? 'included'
+                      : `₦${parseFloat(project.softwarePrice || 0).toFixed(2)}`}
+                  </p>
+                )}
+                {project.hasSoftware && project.softwareSaleMode === 'separate' && parseFloat(project.fullProjectPrice || 0) > 0 && (
+                  <p className="text-admin-muted text-sm">
+                    Bundle: ₦{parseFloat(project.fullProjectPrice).toFixed(2)}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-admin-text mb-2 flex items-center space-x-2">
                   <Calendar size={16} />
                   <span>Created</span>
                 </h3>
-                <p className="text-gray-600">{formatDate(project.createdAt)}</p>
+                <p className="text-admin-muted">{formatDate(project.createdAt)}</p>
               </div>
-
-              {/* Updated Date */}
-              {project.updatedAt && project.updatedAt !== project.createdAt && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
-                    <Calendar size={16} />
-                    <span>Last Updated</span>
-                  </h3>
-                  <p className="text-gray-600">{formatDate(project.updatedAt)}</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Table of Contents - Show for documentation projects */}
-      {projectType === 'documentation' && (
-        <TableOfContents collapsible={true} defaultExpanded={true} />
+      {project.hasSoftware && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-xl font-bold text-admin-blue mb-4 flex items-center gap-2">
+            <Package size={20} /> Accompanying software
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <p><span className="text-admin-muted">Name:</span> <span className="text-admin-text font-medium">{project.softwareName || '—'}</span></p>
+              <p><span className="text-admin-muted">Version:</span> <span className="text-admin-text">{project.softwareVersion || '—'}</span></p>
+              <p><span className="text-admin-muted">Operating system:</span> <span className="text-admin-text">{project.softwareOperatingSystem || '—'}</span></p>
+              <p><span className="text-admin-muted">Requirements:</span> <span className="text-admin-text">{project.softwareRequirements || '—'}</span></p>
+            </div>
+            <div className="space-y-2">
+              <p><span className="text-admin-muted">Sale mode:</span> <span className="text-admin-text">{project.softwareSaleMode === 'separate' ? 'Sold separately' : 'Included with documentation'}</span></p>
+              <p><span className="text-admin-muted">Licence:</span> <span className="text-admin-text">{project.softwareLicense || '—'}</span></p>
+              <p className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-admin-blue" />
+                <span className="text-admin-text">
+                  {project.softwareRedistributionAllowed ? 'Redistribution permitted' : 'Redistribution not permitted'}
+                </span>
+              </p>
+              {project.softwareDescription && (
+                <p className="text-admin-muted whitespace-pre-wrap">{project.softwareDescription}</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Files Section */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-bold text-primary-blue mb-4">Project Files</h2>
-        
+      {project.hasSoftware === false && project.projectType === 'documentation' && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-xl font-bold text-admin-blue mb-2 flex items-center gap-2">
+            <Package size={20} /> Documentation only
+          </h2>
+          <p className="text-admin-muted text-sm">
+            This project has no active software. Use Edit to add an installer at any time.
+          </p>
+        </div>
+      )}
+
+      {project.projectType === 'documentation' && (
+        <div className="card p-6 mb-6">
+          <h2 className="text-xl font-bold text-admin-blue mb-4">Table of Contents</h2>
+          <TableOfContents collapsible={true} defaultExpanded={true} />
+        </div>
+      )}
+
+      <div className="card p-6">
+        <h2 className="text-xl font-bold text-admin-blue mb-4">Project files</h2>
+
         <div className="space-y-4">
-          {/* Documentation File */}
-          {project.documentationFile && (
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center space-x-3">
-                <FileText className="text-primary-blue" size={24} />
-                <div>
-                  <p className="font-semibold text-gray-700">Documentation File</p>
-                  <p className="text-sm text-gray-500">{project.documentationFile}</p>
-                </div>
+          {currentFiles.length === 0 && historyFiles.length === 0 && (
+            <p className="text-admin-muted text-center py-8">No files uploaded for this project.</p>
+          )}
+
+          {currentFiles.map((file) => (
+            <FileRow
+              key={file.id}
+              file={file}
+              label={
+                file.category === 'documentation'
+                  ? 'Documentation'
+                  : file.category === 'software'
+                    ? 'Software installer'
+                    : 'User guide'
+              }
+            />
+          ))}
+
+          {historyFiles.length > 0 && (
+            <div className="pt-4 border-t border-admin-border">
+              <h3 className="text-sm font-semibold text-admin-text mb-3 flex items-center gap-2">
+                <History size={16} /> Replaced files (kept for existing purchases)
+              </h3>
+              <div className="space-y-3">
+                {historyFiles.map((file) => (
+                  <FileRow
+                    key={file.id}
+                    file={file}
+                    label={
+                      file.category === 'documentation'
+                        ? 'Previous documentation'
+                        : file.category === 'software'
+                          ? 'Previous installer'
+                          : 'Previous user guide'
+                    }
+                  />
+                ))}
               </div>
-              <button
-                onClick={() => handleDownload(project.documentationFile, 'documentation')}
-                className="flex items-center space-x-2 px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-primary-green transition-colors"
-              >
-                <Download size={18} />
-                <span>Download</span>
-              </button>
             </div>
-          )}
-
-          {/* AI Generated Attachments */}
-          {documentFiles.length > 0 && (
-            <div className="space-y-3">
-              {documentFiles.map((file) => (
-                <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="text-primary-blue" size={24} />
-                    <div>
-                      <p className="font-semibold text-gray-700">{file.fileName}</p>
-                      <p className="text-sm text-gray-500">
-                        {file.fileType?.toUpperCase()} • {new Date(file.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDocumentDownload(file.filePath)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-primary-green transition-colors"
-                  >
-                    <Download size={18} />
-                    <span>Download</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Thumbnail File */}
-          {project.thumbnail && (
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center space-x-3">
-                <ImageIcon className="text-primary-blue" size={24} />
-                <div>
-                  <p className="font-semibold text-gray-700">Thumbnail Image</p>
-                  <p className="text-sm text-gray-500">{project.thumbnail}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleDownload(project.thumbnail, 'thumbnail')}
-                className="flex items-center space-x-2 px-4 py-2 bg-primary-blue text-white rounded-lg hover:bg-primary-green transition-colors"
-              >
-                <Download size={18} />
-                <span>Download</span>
-              </button>
-            </div>
-          )}
-
-          {!project.documentationFile && !project.thumbnail && documentFiles.length === 0 && (
-            <p className="text-gray-500 text-center py-8">No files uploaded for this project.</p>
           )}
         </div>
       </div>

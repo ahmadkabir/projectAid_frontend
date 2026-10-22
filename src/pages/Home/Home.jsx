@@ -36,8 +36,8 @@ const Home = () => {
 
   const fetchFeaturedProjects = async () => {
     try {
-      // Fetch active projects - backend handles filtering
-      const response = await projectsAPI.getAll({ status: 'active' });
+      // Published projects only; the API enforces this for visitors.
+      const response = await projectsAPI.getAll();
       const projects = response.data.projects || [];
       // Get first 6 projects as featured
       setFeaturedProjects(projects.slice(0, 6));
@@ -165,8 +165,7 @@ const Home = () => {
                 >
                   <option value="">Select Project Type</option>
                   <option value="documentation">Documentation Only</option>
-                  <option value="software">Software Only</option>
-                  <option value="full">Full Project</option>
+                  <option value="software">With Accompanying Software</option>
                 </select>
               </div>
 
@@ -188,15 +187,6 @@ const Home = () => {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => {
-                    setFilters({ department: '', projectType: 'full' });
-                    setTimeout(() => handleFindProjects(), 100);
-                  }}
-                  className="px-4 py-2 bg-primary-blue/10 text-primary-blue rounded-full text-sm font-medium hover:bg-primary-blue/20 transition-colors"
-                >
-                  Full Projects
-                </button>
-                <button
-                  onClick={() => {
                     setFilters({ department: '', projectType: 'documentation' });
                     setTimeout(() => handleFindProjects(), 100);
                   }}
@@ -211,7 +201,7 @@ const Home = () => {
                   }}
                   className="px-4 py-2 bg-primary-blue/10 text-primary-blue rounded-full text-sm font-medium hover:bg-primary-blue/20 transition-colors"
                 >
-                  Software Only
+                  With Software
                 </button>
                 <button
                   onClick={() => {
@@ -359,8 +349,8 @@ const Home = () => {
               highlight={false}
             />
             <PricingCard
-              title="Software Only"
-              description="Full source code and software files with documentation"
+              title="Documentation + Software"
+              description="Full documentation together with the working software where available"
               price="Starting at"
               highlight={true}
             />

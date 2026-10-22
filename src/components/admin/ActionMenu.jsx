@@ -61,40 +61,40 @@ const ActionMenu = ({ project, onEdit, onDeleteClick }) => {
     <div className="relative" ref={menuRef} onClick={(e) => e.stopPropagation()}>
       <button
         onClick={handleToggle}
-        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        className="p-2 rounded-lg hover:bg-admin-bg transition-colors"
         aria-label="Actions"
         aria-expanded={isOpen}
         type="button"
       >
-        <MoreVertical size={18} className="text-gray-600" />
+        <MoreVertical size={18} className="text-admin-muted" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-[100] py-1">
+        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-admin-border z-[100] py-1">
           <button
             onClick={handleView}
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-admin-text hover:bg-admin-bg flex items-center space-x-2 transition-colors"
           >
             <Eye size={16} />
             <span>View</span>
           </button>
           <button
             onClick={handleEdit}
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-admin-text hover:bg-admin-bg flex items-center space-x-2 transition-colors"
           >
             <Edit size={16} />
             <span>Edit</span>
           </button>
           <button
             onClick={handleAttachment}
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-admin-text hover:bg-admin-bg flex items-center space-x-2 transition-colors"
           >
             <Paperclip size={16} />
             <span>Attachment</span>
           </button>
           <button
             onClick={handleDelete}
-            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-admin-pending hover:bg-admin-pending/10 flex items-center space-x-2 transition-colors"
           >
             <Trash2 size={16} />
             <span>Delete</span>

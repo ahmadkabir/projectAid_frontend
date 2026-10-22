@@ -91,11 +91,9 @@ function AppRoutes() {
       <Route
         path="/projects/:id"
         element={
-          <PrivateRoute>
-            <PageLayout>
-              <ProjectDetails />
-            </PageLayout>
-          </PrivateRoute>
+          <PageLayout>
+            <ProjectDetails />
+          </PageLayout>
         }
       />
       <Route

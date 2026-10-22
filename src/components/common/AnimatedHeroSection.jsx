@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { BookOpen, CheckCircle, XCircle, Package } from 'lucide-react';
-import { allowsSoftwareProjects } from '../../utils/courseValidation';
 import logo from '../../assets/logo.png';
 
 const AnimatedHeroSection = ({ 
@@ -18,21 +17,26 @@ const AnimatedHeroSection = ({
     if (onImageError) onImageError();
   };
 
-  const minPrice = project ? Math.min(
-    project.documentationPrice || Infinity,
-    project.softwarePrice || Infinity,
-    project.fullProjectPrice || Infinity
-  ) : Infinity;
+  const optionPrices = (project?.purchaseOptions || []).map((option) => Number(option.price)).filter((price) => price > 0);
+  const minPrice = optionPrices.length > 0
+    ? Math.min(...optionPrices)
+    : project
+      ? Math.min(
+          project.documentationPrice || project.price || Infinity,
+          project.softwarePrice || Infinity,
+          project.fullProjectPrice || Infinity
+        )
+      : Infinity;
 
-  const isAvailable = project?.status === 'active';
-  const allowsSoftware = project?.category ? allowsSoftwareProjects(project.category.name) : false;
+  const isAvailable = project?.status === 'published' || project?.status === 'active';
 
   const getProjectTypes = () => {
     if (!project) return [];
     const types = [];
-    if (project.documentationPrice > 0) types.push('Documentation');
-    if (allowsSoftware && project.softwarePrice > 0) types.push('Software');
-    if (allowsSoftware && project.fullProjectPrice > 0) types.push('Full Project');
+    if (project.documentationPrice > 0 || project.price > 0) types.push('Documentation');
+    if (project.hasSoftware) {
+      types.push(project.softwareSaleMode === 'included' ? 'Documentation + Software' : 'Software available separately');
+    }
     return types;
   };
 

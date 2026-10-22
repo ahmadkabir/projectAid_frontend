@@ -4,11 +4,16 @@ import { projectsAPI } from '../../services/api';
 import Loading from '../../components/common/Loading';
 import ActionMenu from '../../components/admin/ActionMenu';
 import DeleteConfirmationModal from '../../components/admin/DeleteConfirmationModal';
-import { Search, Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import StatusBadge from '../../components/admin/StatusBadge';
+import Pagination from '../../components/admin/Pagination';
+import ProjectWizard from '../../components/admin/ProjectWizard';
+import { useAdminPage } from '../../app/admin/layout/adminPageContext';
+import { Search, Calendar, Plus, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
 const AdminProjects = () => {
+  const { setAdminPage } = useAdminPage() || {};
   const [projects, setProjects] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,22 +29,11 @@ const AdminProjects = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const [showModal, setShowModal] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    course: '',
-    category: '',
-    level: '',
-    institution: '',
-    price: '',
-    status: 'active'
-  });
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,11 +70,17 @@ const AdminProjects = () => {
   }, [fetchProjects]);
 
   useEffect(() => {
+    if (!setAdminPage) return;
+    setAdminPage('Projects', loading ? 'Loading projects…' : `${total} project${total === 1 ? '' : 's'} found`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total, loading, setAdminPage]);
+
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await projectsAPI.getCategories();
         setCategories(response.data?.categories || []);
-      } catch (error) {
+      } catch {
         toast.error('Failed to load categories');
       }
     };
@@ -94,113 +94,36 @@ const AdminProjects = () => {
         try {
           const response = await projectsAPI.getById(editId);
           if (response.data?.project) {
-            openEditModal(response.data.project);
+            openEditWizard(response.data.project);
           }
-        } catch (error) {
+        } catch {
           toast.error('Unable to open project for editing');
         } finally {
           navigate(location.pathname, { replace: true });
         }
       })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, location.pathname, navigate]);
 
-  const openCreateModal = () => {
-    resetForm();
-    setShowModal(true);
+  const openCreateWizard = () => {
+    setEditingProject(null);
+    setWizardOpen(true);
   };
 
-  const openEditModal = (project) => {
+  const openEditWizard = (project) => {
     setEditingProject(project);
-    const projectType = project.projectType
-      || (project.softwarePrice > 0 || project.fullProjectPrice > 0 ? 'software' : 'documentation');
-    const price = project.price
-      || project.documentationPrice
-      || project.softwarePrice
-      || project.fullProjectPrice
-      || '';
-
-    setFormData({
-      title: project.title,
-      description: project.description,
-      course: project.categoryId,
-      category: projectType,
-      level: project.level || '',
-      institution: project.institution || '',
-      price: price.toString(),
-      status: project.status
-    });
-    setShowModal(true);
+    setWizardOpen(true);
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      course: '',
-      category: '',
-      level: '',
-      institution: '',
-      price: '',
-      status: 'active'
-    });
+  const closeWizard = () => {
+    setWizardOpen(false);
     setEditingProject(null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.course) {
-      toast.error('Please select a course');
-      return;
-    }
-
-    if (!formData.category) {
-      toast.error('Please select a category');
-      return;
-    }
-
-    if (!formData.level) {
-      toast.error('Please select a level');
-      return;
-    }
-
-    if (formData.category === 'documentation') {
-      if (!formData.price || parseFloat(formData.price) <= 0) {
-        toast.error('Documentation price must be greater than 0');
-        return;
-      }
-    }
-
-    try {
-      const payload = new FormData();
-      payload.append('title', formData.title);
-      payload.append('description', formData.description);
-      payload.append('course', formData.course);
-      payload.append('category', formData.category);
-      payload.append('level', formData.level);
-      if (formData.institution) {
-        payload.append('institution', formData.institution);
-      }
-      if (formData.price) {
-        payload.append('price', formData.price);
-      }
-      payload.append('status', formData.status);
-
-      if (editingProject) {
-        await projectsAPI.update(editingProject.id, payload);
-        toast.success('Project updated successfully');
-      } else {
-        await projectsAPI.create(payload);
-        toast.success('Project created successfully');
-      }
-
-      setShowModal(false);
-      resetForm();
-      await fetchProjects();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save project');
-    }
+  const handleSaved = async () => {
+    closeWizard();
+    await fetchProjects();
   };
 
   const handleDeleteClick = (project) => {
@@ -223,8 +146,8 @@ const AdminProjects = () => {
     }
   };
 
-  const handleFilterSubmit = (e) => {
-    e.preventDefault();
+  const handleFilterSubmit = (event) => {
+    event.preventDefault();
     setPage(1);
   };
 
@@ -238,13 +161,6 @@ const AdminProjects = () => {
     setPage(1);
   };
 
-  const currentRange = useMemo(() => {
-    if (total === 0) return '0';
-    const start = (page - 1) * limit + 1;
-    const end = Math.min(page * limit, total);
-    return `${start}-${end}`;
-  }, [page, total, limit]);
-
   const totalPages = useMemo(() => Math.ceil(total / limit) || 1, [total, limit]);
 
   const formatDateValue = (value) => {
@@ -256,30 +172,12 @@ const AdminProjects = () => {
     }
   };
 
-  const renderStatusBadge = (status) => {
-    const classes = status === 'active'
-      ? 'bg-green-100 text-green-700'
-      : 'bg-gray-100 text-gray-700';
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${classes}`}>
-        {status || 'inactive'}
-      </span>
-    );
-  };
-
   if (loading) return <Loading />;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-primary-blue">Projects</h1>
-          <p className="text-gray-600">Manage all projects available on the platform</p>
-        </div>
-        <button
-          onClick={openCreateModal}
-          className="btn-primary inline-flex items-center space-x-2"
-        >
+    <div className="space-y-5">
+      <div className="flex justify-end">
+        <button onClick={openCreateWizard} className="admin-btn">
           <Plus size={18} />
           <span>Add Project</span>
         </button>
@@ -287,306 +185,173 @@ const AdminProjects = () => {
 
       <form onSubmit={handleFilterSubmit} className="card p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="md:col-span-2 space-y-1">
-            <label className="text-sm font-medium text-gray-600">Search</label>
+          <div className="md:col-span-2 space-y-1.5">
+            <label className="admin-label" htmlFor="projects-search">Search</label>
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-muted pointer-events-none" />
               <input
+                id="projects-search"
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search by title, course, or type"
-                className="input-field pl-10"
+                className="admin-input pl-9"
               />
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-600">Status</label>
+          <div className="space-y-1.5">
+            <label className="admin-label" htmlFor="projects-status">Status</label>
             <select
+              id="projects-status"
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="input-field"
+              onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}
+              className="admin-input"
             >
               <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="draft">Draft</option>
+              <option value="pending_review">Pending review</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-600">Category</label>
+          <div className="space-y-1.5">
+            <label className="admin-label" htmlFor="projects-category">Category</label>
             <select
+              id="projects-category"
               value={typeFilter}
-              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-              className="input-field"
+              onChange={(event) => { setTypeFilter(event.target.value); setPage(1); }}
+              className="admin-input"
             >
               <option value="all">All</option>
-              <option value="documentation">Documentation</option>
-              <option value="software">Software</option>
+              <option value="documentation">Documentation only</option>
+              <option value="software">With software</option>
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-600">Course</label>
+          <div className="space-y-1.5">
+            <label className="admin-label" htmlFor="projects-course">Course</label>
             <select
+              id="projects-course"
               value={courseFilter}
-              onChange={(e) => { setCourseFilter(e.target.value); setPage(1); }}
-              className="input-field"
+              onChange={(event) => { setCourseFilter(event.target.value); setPage(1); }}
+              className="admin-input"
             >
               <option value="all">All Courses</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
               ))}
             </select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-600">Start Date</label>
+          <div className="space-y-1.5">
+            <label className="admin-label" htmlFor="projects-start">Start date</label>
             <div className="relative">
-              <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-muted pointer-events-none" />
               <input
+                id="projects-start"
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="input-field pl-10"
+                onChange={(event) => setStartDate(event.target.value)}
+                className="admin-input pl-9"
               />
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-600">End Date</label>
+          <div className="space-y-1.5">
+            <label className="admin-label" htmlFor="projects-end">End date</label>
             <div className="relative">
-              <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-muted pointer-events-none" />
               <input
+                id="projects-end"
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="input-field pl-10"
+                onChange={(event) => setEndDate(event.target.value)}
+                className="admin-input pl-9"
               />
             </div>
           </div>
           <div className="flex items-end gap-3">
-            <button type="submit" className="btn-primary" disabled={fetching}>
+            <button type="submit" className="admin-btn" disabled={fetching}>
               {fetching ? 'Filtering...' : 'Apply Filters'}
             </button>
-            <button type="button" onClick={resetFilters} className="btn-outline">
+            <button type="button" onClick={resetFilters} className="admin-btn-ghost">
+              <RotateCcw size={15} />
               Reset
             </button>
           </div>
         </div>
       </form>
 
-      <div className="card overflow-hidden">
+      <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="admin-table min-w-[760px]">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Project Title</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Course</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created Date</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                <th scope="col">Project Title</th>
+                <th scope="col">Course</th>
+                <th scope="col">Category</th>
+                <th scope="col">Status</th>
+                <th scope="col">Created Date</th>
+                <th scope="col" className="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200 text-sm">
+            <tbody>
               {projects.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-gray-500">
-                    No projects found
+                  <td colSpan={6} className="text-center py-14 text-admin-muted">
+                    <p className="font-medium text-admin-text">No projects found</p>
+                    <p className="text-xs mt-1">Try adjusting the filters or search.</p>
                   </td>
                 </tr>
               ) : (
-                projects.map((project) => {
-                  const projectType = project.projectType || 'documentation';
-                  return (
-                    <tr key={project.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-semibold text-primary-blue">{project.title}</td>
-                      <td className="px-4 py-3 text-gray-600">{project.category?.name || 'N/A'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          projectType === 'software' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                        }`}>
-                          {projectType === 'software' ? 'Software' : 'Documentation'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{renderStatusBadge(project.status)}</td>
-                      <td className="px-4 py-3 text-gray-600">{formatDateValue(project.createdAt)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <ActionMenu
-                          project={project}
-                          onEdit={openEditModal}
-                          onDeleteClick={handleDeleteClick}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })
+                projects.map((project) => (
+                  <tr key={project.id}>
+                    <td className="font-semibold text-admin-blue max-w-[260px] truncate">{project.title}</td>
+                    <td className="text-admin-muted">{project.category?.name || 'N/A'}</td>
+                    <td>
+                      <span className={`status-pill ${
+                        project.hasSoftware ? 'bg-admin-blue/10 text-admin-blue' : 'bg-admin-success/10 text-admin-success'
+                      }`}>
+                        <span className={`status-dot ${project.hasSoftware ? 'bg-admin-blue' : 'bg-admin-success'}`} />
+                        {project.hasSoftware ? 'Documentation + Software' : 'Documentation only'}
+                      </span>
+                    </td>
+                    <td><StatusBadge status={project.status} /></td>
+                    <td className="text-admin-muted whitespace-nowrap">{formatDateValue(project.createdAt)}</td>
+                    <td className="text-right">
+                      <ActionMenu
+                        project={project}
+                        onEdit={openEditWizard}
+                        onDeleteClick={handleDeleteClick}
+                      />
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
-        {projects.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 text-sm text-gray-600 gap-3">
-            <p>Showing {currentRange} of {total} projects</p>
-            <div className="flex items-center gap-2">
-              <button
-                className="btn-outline flex items-center gap-1"
-                disabled={page === 1}
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-              >
-                <ChevronLeft size={16} /> Prev
-              </button>
-              <span className="font-semibold">Page {page} of {totalPages}</span>
-              <button
-                className="btn-outline flex items-center gap-1"
-                disabled={page === totalPages}
-                onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-              >
-                Next <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={limit}
+          onPageChange={setPage}
+          label="projects"
+        />
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4 text-primary-blue">
-              {editingProject ? 'Edit Project' : 'Add New Project'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="label">Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="input-field"
-                  required
-                />
-              </div>
-              <div>
-                <label className="label">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="input-field"
-                  rows="4"
-                  required
-                />
-              </div>
-              <div>
-                <label className="label">Course</label>
-                <select
-                  value={formData.course}
-                  onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Select course</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Select category</option>
-                  <option value="documentation">Documentation</option>
-                  <option value="software">Software</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">Level<span className="text-red-500"> *</span></label>
-                <select
-                  value={formData.level}
-                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Select level</option>
-                  <option value="ND">ND</option>
-                  <option value="HND">HND</option>
-                  <option value="BSc">BSc</option>
-                  <option value="MSc">MSc</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">Institution</label>
-                <input
-                  type="text"
-                  value={formData.institution}
-                  onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                  className="input-field"
-                  placeholder="e.g., Federal Polytechnic, Kano"
-                />
-              </div>
-              {formData.category === 'documentation' && (
-                <>
-                  <div>
-                    <label className="label">Price (₦)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      className="input-field"
-                      required
-                      placeholder="Enter documentation price"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="input-field"
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                </>
-              )}
-              {formData.category === 'software' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                  <strong>Note:</strong> Software pricing will be supported soon. Please use Documentation for now.
-                </div>
-              )}
-              <div className="flex gap-4">
-                <button type="submit" className="btn-primary flex-1">
-                  {editingProject ? 'Update' : 'Create'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    resetForm();
-                  }}
-                  className="btn-outline flex-1"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {wizardOpen && (
+        <ProjectWizard
+          project={editingProject}
+          categories={categories}
+          onClose={closeWizard}
+          onSaved={handleSaved}
+        />
       )}
 
       <DeleteConfirmationModal

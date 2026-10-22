@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import StatusBadge from '../admin/StatusBadge';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -13,7 +14,7 @@ const formatDate = (dateString) => {
 const RecentOrders = ({ orders }) => {
   if (!orders || orders.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-admin-muted">
         <p>No recent orders</p>
       </div>
     );
@@ -21,54 +22,32 @@ const RecentOrders = ({ orders }) => {
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="admin-table min-w-full">
+        <thead>
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Order ID
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              User
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Amount
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Date
-            </th>
+            <th scope="col">Order ID</th>
+            <th scope="col">User</th>
+            <th scope="col">Amount</th>
+            <th scope="col">Status</th>
+            <th scope="col">Date</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody>
           {orders.slice(0, 5).map((order) => (
-            <tr key={order.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-primary-blue">
-                <Link to={`/admin/orders/${order.id}`}>#{order.id}</Link>
+            <tr key={order.id}>
+              <td className="font-semibold text-admin-blue whitespace-nowrap">
+                <Link to="/admin/orders" className="hover:underline">
+                  #{order.id}
+                </Link>
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                {order.user?.name || 'N/A'}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+              <td className="whitespace-nowrap">{order.user?.name || 'N/A'}</td>
+              <td className="whitespace-nowrap font-semibold">
                 ₦{parseFloat(order.totalAmount || 0).toFixed(2)}
               </td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <span
-                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    order.status === 'completed'
-                      ? 'bg-green-100 text-green-800'
-                      : order.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {order.status}
-                </span>
+              <td className="whitespace-nowrap">
+                <StatusBadge status={order.status} />
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                {formatDate(order.createdAt)}
-              </td>
+              <td className="whitespace-nowrap text-admin-muted">{formatDate(order.createdAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -77,7 +56,7 @@ const RecentOrders = ({ orders }) => {
         <div className="mt-4 text-center">
           <Link
             to="/admin/orders"
-            className="text-primary-blue hover:text-primary-blue-light font-medium"
+            className="text-admin-blue hover:text-admin-blue-hover font-medium text-sm"
           >
             View all orders →
           </Link>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { projectsAPI, ordersAPI } from '../../services/api';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { projectsAPI, ordersAPI, downloadProjectFile } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Loading from '../../components/common/Loading';
 import toast from 'react-hot-toast';
@@ -58,7 +58,11 @@ const renderDocument = (text) => {
 const DocumentPreview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+
+  const isAdmin = user?.role === 'admin';
+  const wantFullView = isAdmin && searchParams.get('full') === '1';
 
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +74,9 @@ const DocumentPreview = () => {
     const fetchPreview = async () => {
       try {
         setLoading(true);
-        const response = await projectsAPI.getDocumentPreview(id);
+        const response = await projectsAPI.getDocumentPreview(id, {
+          full: wantFullView ? 1 : 0
+        });
         if (!cancelled) setPreview(response.data);
       } catch (error) {
         if (!cancelled) {
@@ -86,7 +92,7 @@ const DocumentPreview = () => {
     return () => {
       cancelled = true;
     };
-  }, [id, navigate, user]);
+  }, [id, navigate, user, wantFullView]);
 
   const handlePurchase = async () => {
     if (!user) {
@@ -129,12 +135,7 @@ const DocumentPreview = () => {
   const estimatedPages = totalLength ? Math.max(1, Math.ceil(totalLength / 3000)) : 0;
   const price = parseFloat(project?.documentationPrice || 0);
 
-  const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
-  const openFile = (filename) => {
-    if (!filename) return;
-    const normalized = filename.startsWith('/') ? filename.slice(1) : filename;
-    window.open(`${baseUrl}/${normalized}`, '_blank');
-  };
+  const previewFiles = preview.documentFiles || [];
 
   return (
     <div className="bg-gray-50 min-h-screen pb-16">
@@ -150,6 +151,21 @@ const DocumentPreview = () => {
           </button>
 
           <div className="flex items-center space-x-3">
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  if (wantFullView) next.delete('full');
+                  else next.set('full', '1');
+                  setSearchParams(next, { replace: true });
+                }}
+                className="inline-flex items-center space-x-1.5 border border-gray-300 hover:border-primary-blue text-gray-700 hover:text-primary-blue px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                title={wantFullView ? 'Show what customers see' : 'Show the full document (admin only)'}
+              >
+                {wantFullView ? <Eye size={16} /> : <Unlock size={16} />}
+                <span>{wantFullView ? 'Preview as customer' : 'View full document'}</span>
+              </button>
+            )}
             {unlocked ? (
               <span className="inline-flex items-center space-x-1.5 bg-primary-green/10 text-primary-green px-3 py-1 rounded-full text-sm font-semibold">
                 <Unlock size={16} />
@@ -191,19 +207,10 @@ const DocumentPreview = () => {
             {/* No written text to preview: buyers download the file, others see the offer */}
             {unlocked ? (
               <div className="flex flex-wrap items-center justify-center gap-3">
-                {project?.documentationFile && (
-                  <button
-                    onClick={() => openFile(project.documentationFile)}
-                    className="inline-flex items-center space-x-2 bg-primary-green hover:bg-primary-green/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-                  >
-                    <Download size={18} />
-                    <span>Download PDF</span>
-                  </button>
-                )}
-                {(preview.documentFiles || []).map((file) => (
+                {previewFiles.map((file) => (
                   <button
                     key={file.id}
-                    onClick={() => openFile(file.filePath)}
+                    onClick={() => downloadProjectFile(file)}
                     className="inline-flex items-center space-x-2 bg-primary-blue hover:bg-primary-blue-light text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                   >
                     <Download size={18} />
@@ -377,19 +384,10 @@ const DocumentPreview = () => {
             {/* Unlocked actions */}
             {unlocked && (
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                {project?.documentationFile && (
-                  <button
-                    onClick={() => openFile(project.documentationFile)}
-                    className="inline-flex items-center space-x-2 bg-primary-green hover:bg-primary-green/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-                  >
-                    <Download size={18} />
-                    <span>Download PDF</span>
-                  </button>
-                )}
-                {(preview.documentFiles || []).map((file) => (
+                {previewFiles.map((file) => (
                   <button
                     key={file.id}
-                    onClick={() => openFile(file.filePath)}
+                    onClick={() => downloadProjectFile(file)}
                     className="inline-flex items-center space-x-2 bg-primary-blue hover:bg-primary-blue-light text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                   >
                     <Download size={18} />

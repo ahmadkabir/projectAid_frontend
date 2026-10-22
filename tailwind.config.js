@@ -32,6 +32,19 @@ export default {
         'primary-blue-light': '#1188C9',
         'primary-green': '#82C53A',
         'primary-teal': '#C0D9C7',
+        // Admin design system (mirrored as CSS variables in index.css)
+        admin: {
+          blue: '#0C3968',        // Primary - sidebar, buttons, active states (brand navy)
+          'blue-hover': '#1188C9',// Primary hover (brand light blue)
+          bg: '#EEF3F8',          // Page background (navy-tinted light gray)
+          surface: '#FFFFFF',     // Main surface
+          text: '#1F2937',        // Primary text (gray-800)
+          muted: '#6B7280',       // Secondary text (gray-500)
+          border: '#E5E7EB',      // Borders (gray-200)
+          pending: '#D96B6B',     // Pending status
+          success: '#82C53A',     // Active/completed status (brand green)
+          neutral: '#9CA3AF',     // Inactive/neutral status (gray-400)
+        },
       },
     },
   },

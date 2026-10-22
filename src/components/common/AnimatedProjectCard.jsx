@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, CheckCircle, XCircle } from 'lucide-react';
+import { BookOpen, CheckCircle, XCircle, Package } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
 const AnimatedProjectCard = ({ project }) => {
@@ -19,7 +19,7 @@ const AnimatedProjectCard = ({ project }) => {
         project.fullProjectPrice || Infinity
       );
 
-  const isAvailable = project.status === 'active';
+  const isAvailable = project.status === 'published' || project.status === 'active';
 
   return (
     <Link
@@ -75,8 +75,14 @@ const AnimatedProjectCard = ({ project }) => {
               {project.title}
             </h3>
 
-            {/* Availability Badge */}
-            <div className="flex items-center space-x-2">
+            {/* Availability and software badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              {project.hasSoftware && (
+                <span className="inline-flex items-center space-x-1 bg-primary-blue/90 text-white px-2.5 py-1 rounded-md text-xs font-semibold">
+                  <Package size={12} />
+                  <span>{project.softwareSaleMode === 'included' ? 'Software included' : 'Software available'}</span>
+                </span>
+              )}
               {isAvailable ? (
                 <span className="inline-flex items-center space-x-1 bg-primary-green/90 text-white px-2.5 py-1 rounded-md text-xs font-semibold">
                   <CheckCircle size={12} />
