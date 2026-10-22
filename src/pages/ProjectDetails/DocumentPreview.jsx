@@ -67,6 +67,8 @@ const DocumentPreview = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +96,43 @@ const DocumentPreview = () => {
     };
   }, [id, navigate, user, wantFullView]);
 
+  // Render the same preview as a real PDF (watermark + page numbers).
+  useEffect(() => {
+    if (!preview?.available) {
+      setPdfUrl(null);
+      setPdfLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let objectUrl = null;
+
+    setPdfLoading(true);
+    setPdfUrl(null);
+
+    projectsAPI
+      .documentPreviewPdf(id, { full: wantFullView ? 1 : 0 })
+      .then((response) => {
+        if (cancelled) return;
+        objectUrl = window.URL.createObjectURL(
+          new Blob([response.data], { type: 'application/pdf' })
+        );
+        setPdfUrl(objectUrl);
+      })
+      .catch(() => {
+        // Fall back to the HTML sample already loaded.
+        if (!cancelled) setPdfUrl(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPdfLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [id, preview?.available, preview?.unlocked, wantFullView]);
+
   const handlePurchase = async () => {
     if (!user) {
       toast.error('Please login to purchase the full document');
@@ -108,17 +147,18 @@ const DocumentPreview = () => {
       });
       const orderId = response.data.order.id;
 
-      await ordersAPI.processPayment(orderId, {
-        paymentMethod: 'mock_payment',
-        transactionId: `TXN-${Date.now()}`
-      });
+      const payment = await ordersAPI.initializePayment(orderId);
+      if (!payment.data.authorizationUrl) {
+        throw new Error('Paystack did not return a checkout URL');
+      }
 
-      toast.success('Payment successful! The full document is now unlocked.');
-      // Refetch with the stored token so the endpoint returns the full text
-      const refreshed = await projectsAPI.getDocumentPreview(id);
-      setPreview(refreshed.data);
+      sessionStorage.setItem(
+        'paymentReturnTo',
+        `${window.location.pathname}${window.location.search}`
+      );
+      window.location.assign(payment.data.authorizationUrl);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Purchase failed');
+      toast.error(error.response?.data?.message || error.message || 'Purchase failed');
     } finally {
       setPurchasing(false);
     }
@@ -247,10 +287,10 @@ const DocumentPreview = () => {
             )}
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto">
+          <div className={`${pdfUrl ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
             {/* The "page" */}
             <article className="relative bg-white shadow-[0_10px_40px_rgba(0,0,0,0.12)] rounded-sm border border-gray-100 px-7 py-10 md:px-16 md:py-16 font-serif text-gray-800 leading-7 text-[15px]">
-              {!unlocked && (
+              {!unlocked && !pdfUrl && (
                 <>
                   <div
                     aria-hidden="true"
@@ -267,26 +307,39 @@ const DocumentPreview = () => {
               )}
 
               <div className="relative">
-                {blocks.map((block) => {
-                  if (block.type === 'rule') {
-                    return <hr key={block.key} className="my-6 border-gray-200" />;
-                  }
-                  if (block.type === 'h') {
+                {pdfLoading ? (
+                  <div className="flex h-[520px] items-center justify-center font-sans text-sm text-gray-500">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-blue border-t-transparent" />
+                    <span className="ml-3">Preparing PDF preview…</span>
+                  </div>
+                ) : pdfUrl ? (
+                  <iframe
+                    src={pdfUrl}
+                    title={`${project?.title || 'Project'} preview PDF`}
+                    className="h-[72vh] min-h-[540px] w-full rounded border border-gray-200 bg-gray-50"
+                  />
+                ) : (
+                  blocks.map((block) => {
+                    if (block.type === 'rule') {
+                      return <hr key={block.key} className="my-6 border-gray-200" />;
+                    }
+                    if (block.type === 'h') {
+                      return (
+                        <h2
+                          key={block.key}
+                          className="text-center font-bold uppercase tracking-wide text-[15px] my-5"
+                        >
+                          {block.text}
+                        </h2>
+                      );
+                    }
                     return (
-                      <h2
-                        key={block.key}
-                        className="text-center font-bold uppercase tracking-wide text-[15px] my-5"
-                      >
+                      <p key={block.key} className="mb-4 text-justify">
                         {block.text}
-                      </h2>
+                      </p>
                     );
-                  }
-                  return (
-                    <p key={block.key} className="mb-4 text-justify">
-                      {block.text}
-                    </p>
-                  );
-                })}
+                  })
+                )}
               </div>
 
               {/* Locked continuation */}
@@ -376,7 +429,9 @@ const DocumentPreview = () => {
                 <span>
                   {unlocked
                     ? `Full document · ~${estimatedPages} pages`
-                    : `Sample page 1 of ~${estimatedPages}`}
+                    : pdfUrl
+                      ? 'Watermarked sample PDF · page numbers'
+                      : `Sample page 1 of ~${estimatedPages}`}
                 </span>
               </div>
             </article>

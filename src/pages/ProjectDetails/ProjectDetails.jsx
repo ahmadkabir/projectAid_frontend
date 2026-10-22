@@ -132,16 +132,18 @@ const ProjectDetails = () => {
       });
       const orderId = response.data.order.id;
 
-      await ordersAPI.processPayment(orderId, {
-        paymentMethod: 'mock_payment',
-        transactionId: `TXN-${Date.now()}`
-      });
+      const payment = await ordersAPI.initializePayment(orderId);
+      if (!payment.data.authorizationUrl) {
+        throw new Error('Paystack did not return a checkout URL');
+      }
 
-      toast.success('Purchase successful! Check your dashboard for downloads.');
-      await fetchUserOrders();
-      setSelectedType(null);
+      sessionStorage.setItem(
+        'paymentReturnTo',
+        `${window.location.pathname}${window.location.search}`
+      );
+      window.location.assign(payment.data.authorizationUrl);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Purchase failed');
+      toast.error(error.response?.data?.message || error.message || 'Purchase failed');
     } finally {
       setPurchasing(false);
     }

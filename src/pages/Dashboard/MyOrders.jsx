@@ -20,6 +20,7 @@ import {
   Lock,
   Eye,
   FileText,
+  CreditCard,
   X,
   Loader2
 } from 'lucide-react';
@@ -47,6 +48,7 @@ const MyOrders = () => {
   const [page, setPage] = useState(1);
   const [viewer, setViewer] = useState(null);
   const [openingFileId, setOpeningFileId] = useState(null);
+  const [payingOrderId, setPayingOrderId] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -67,6 +69,21 @@ const MyOrders = () => {
       toast.error('Failed to load orders');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePayNow = async (orderId) => {
+    setPayingOrderId(orderId);
+    try {
+      const response = await ordersAPI.initializePayment(orderId);
+      if (!response.data.authorizationUrl) {
+        throw new Error('Paystack did not return a checkout URL');
+      }
+      sessionStorage.setItem('paymentReturnTo', '/dashboard/orders');
+      window.location.assign(response.data.authorizationUrl);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Unable to start payment');
+      setPayingOrderId(null);
     }
   };
 
@@ -188,11 +205,27 @@ const MyOrders = () => {
                           <span>{formatDate(order.createdAt)}</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Total Amount</p>
-                        <p className="text-2xl font-bold text-primary-blue">
-                          ₦{parseFloat(order.totalAmount || 0).toFixed(2)}
-                        </p>
+                      <div className="flex flex-col items-end gap-3">
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">Total Amount</p>
+                          <p className="text-2xl font-bold text-primary-blue">
+                            ₦{parseFloat(order.totalAmount || 0).toFixed(2)}
+                          </p>
+                        </div>
+                        {order.status === 'pending' && (
+                          <button
+                            onClick={() => handlePayNow(order.id)}
+                            disabled={payingOrderId === order.id}
+                            className="inline-flex items-center gap-2 rounded-lg bg-primary-green px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-600 disabled:cursor-wait disabled:opacity-70"
+                          >
+                            {payingOrderId === order.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <CreditCard size={16} />
+                            )}
+                            Pay now
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

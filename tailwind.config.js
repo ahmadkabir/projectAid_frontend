@@ -46,6 +46,15 @@ export default {
           neutral: '#9CA3AF',     // Inactive/neutral status (gray-400)
         },
       },
+      keyframes: {
+        'fade-in-down': {
+          '0%': { opacity: '0', transform: 'translateY(-6px) scale(0.98)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' }
+        }
+      },
+      animation: {
+        'fade-in-down': 'fade-in-down 0.18s ease-out'
+      }
     },
   },
   plugins: [],

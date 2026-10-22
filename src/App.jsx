@@ -32,6 +32,7 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import MyOrders from './pages/Dashboard/MyOrders';
 import SupportRequests from './pages/Dashboard/SupportRequests';
 import Profile from './pages/Dashboard/Profile';
+import PaymentCallback from './pages/Payment/PaymentCallback';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -234,6 +235,16 @@ function AppRoutes() {
           <PrivateRoute>
             <PageLayout>
               <Profile />
+            </PageLayout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/payment/callback"
+        element={
+          <PrivateRoute>
+            <PageLayout>
+              <PaymentCallback />
             </PageLayout>
           </PrivateRoute>
         }

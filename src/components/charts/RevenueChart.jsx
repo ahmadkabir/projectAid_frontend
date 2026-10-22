@@ -4,33 +4,40 @@ const RevenueChart = ({ data }) => {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis 
-          dataKey="date" 
-          stroke="#6b7280"
-          style={{ fontSize: '12px' }}
+        <CartesianGrid strokeDasharray="4 4" stroke="#EEF2F7" vertical={false} />
+        <XAxis
+          dataKey="date"
+          stroke="#9CA3AF"
+          tickLine={false}
+          axisLine={false}
+          tick={{ fontSize: 11 }}
+          dy={8}
         />
-        <YAxis 
-          stroke="#6b7280"
-          style={{ fontSize: '12px' }}
-          tickFormatter={(value) => `$${value}`}
+        <YAxis
+          stroke="#9CA3AF"
+          tickLine={false}
+          axisLine={false}
+          tick={{ fontSize: 11 }}
+          width={72}
+          tickFormatter={(value) => `₦${Number(value).toLocaleString()}`}
         />
-        <Tooltip 
-          contentStyle={{ 
-            backgroundColor: '#fff', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px'
+        <Tooltip
+          contentStyle={{
+            backgroundColor: '#fff',
+            border: '1px solid #E5E7EB',
+            borderRadius: '12px',
+            boxShadow: '0 12px 30px -12px rgba(12,57,104,0.25)'
           }}
-          formatter={(value) => [`₦${value.toFixed(2)}`, 'Revenue']}
+          formatter={(value) => [`₦${Number(value).toLocaleString()}`, 'Revenue']}
         />
-        <Legend />
-        <Line 
-          type="monotone" 
-          dataKey="revenue" 
-          stroke="#1188C9" 
-          strokeWidth={2}
-          dot={{ fill: '#1188C9', r: 4 }}
-          activeDot={{ r: 6 }}
+        <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+        <Line
+          type="monotone"
+          dataKey="revenue"
+          stroke="#1188C9"
+          strokeWidth={2.5}
+          dot={false}
+          activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }}
         />
       </LineChart>
     </ResponsiveContainer>

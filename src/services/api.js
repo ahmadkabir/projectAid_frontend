@@ -64,6 +64,9 @@ export const projectsAPI = {
   getAll: (params) => api.get('/projects', { params }),
   getById: (id) => api.get(`/projects/${id}`),
   getDocumentPreview: (id, params) => api.get(`/projects/${id}/document-preview`, { params }),
+  // Same preview rendered as a watermarked PDF (page numbers in the footer).
+  documentPreviewPdf: (id, params) =>
+    api.get(`/projects/${id}/document-preview.pdf`, { params, responseType: 'blob' }),
   create: (formData) => api.post('/projects', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -260,7 +263,8 @@ export const downloadProjectFile = async (file) => {
 // Orders API
 export const ordersAPI = {
   create: (data) => api.post('/orders', data),
-  processPayment: (orderId, data) => api.post(`/orders/${orderId}/payment`, data),
+  initializePayment: (orderId) => api.post(`/orders/${orderId}/pay`),
+  verifyPayment: (reference) => api.get('/orders/payment-status', { params: { reference } }),
   getUserOrders: () => api.get('/orders'),
   getAllOrders: (params) => api.get('/orders/all', { params }),
   getById: (id) => api.get(`/orders/${id}`)

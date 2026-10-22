@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usersAPI, getAvatarUrl } from '../../services/api';
 import Loading from '../../components/common/Loading';
@@ -13,7 +14,16 @@ import {
   BadgeCheck,
   CalendarDays,
   Camera,
-  Loader2
+  Loader2,
+  KeyRound,
+  Sparkles,
+  Check,
+  ArrowLeft,
+  ArrowUpRight,
+  Package,
+  MessageSquare,
+  Compass,
+  GraduationCap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -181,106 +191,230 @@ const Profile = () => {
     .toUpperCase();
 
   const avatarUrl = getAvatarUrl(user?.profileImage);
+  const roleLabel = (user?.role || 'student').toLowerCase();
+  const RoleIcon = roleLabel === 'admin' ? ShieldCheck : GraduationCap;
+
+  const setupSteps = [
+    { label: 'Name added', done: Boolean(user?.name?.trim()) },
+    { label: 'Email added', done: Boolean(user?.email?.trim()) },
+    { label: 'Profile photo', done: Boolean(user?.profileImage) }
+  ];
+  const completedSteps = setupSteps.filter((step) => step.done).length;
+  const setupPercent = Math.round((completedSteps / setupSteps.length) * 100);
+  const setupHint =
+    completedSteps === setupSteps.length
+      ? 'Everything looks good.'
+      : 'Add a profile photo to stand out.';
+
+  const passwordsMatch = passwords.next.length > 0 && passwords.next === passwords.confirm;
+  const passwordLongEnough = passwords.next.length >= 6;
 
   return (
-    <div className="bg-gray-50">
-      {/* Profile Header */}
-      <div className="bg-gradient-to-r from-primary-blue to-primary-blue-light text-white -mt-24 md:-mt-28 pt-24 md:pt-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-            <div className="relative shrink-0">
-              <div className="bg-white/20 backdrop-blur-sm w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold overflow-hidden">
-                {avatarUrl && !avatarFailed ? (
-                  <img
-                    src={avatarUrl}
-                    alt={`${user?.name || 'User'} avatar`}
-                    onError={() => setAvatarFailed(true)}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  initials
+    <div className="min-h-screen bg-[#EEF3F8] pb-16">
+      {/* Cover */}
+      <section className="relative -mt-24 overflow-hidden md:-mt-28">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-blue via-[#0D4278] to-primary-blue-light" />
+        <div
+          className="absolute inset-0 opacity-[0.14]"
+          style={{
+            backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
+            backgroundSize: '24px 24px'
+          }}
+        />
+        <div className="absolute -right-24 -top-28 h-80 w-80 rounded-full border border-white/10" />
+        <div className="absolute -right-10 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="absolute -bottom-32 left-1/4 h-64 w-64 rounded-full bg-primary-green/20 blur-3xl" />
+
+        <div className="relative mx-auto max-w-6xl px-4 pb-28 pt-24 sm:px-6 md:pb-32 md:pt-28 lg:px-8">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-sm font-medium text-white/70 transition-colors hover:text-white"
+          >
+            <ArrowLeft size={16} />
+            Back to dashboard
+          </Link>
+          <p className="mt-7 text-[11px] font-bold uppercase tracking-[0.25em] text-primary-green">
+            Account settings
+          </p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl">
+            Make your profile yours.
+          </h1>
+          <p className="mt-2 max-w-lg text-sm leading-6 text-white/70">
+            Keep your details current, add a photo, and manage the password that protects your
+            account.
+          </p>
+        </div>
+      </section>
+
+      {/* Identity card */}
+      <div className="relative z-10 mx-auto -mt-20 max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-[2rem] border border-white/80 bg-white p-5 shadow-[0_24px_70px_-32px_rgba(12,57,104,0.4)] md:p-7">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="relative h-24 w-24 shrink-0">
+                <div className="h-24 w-24 rounded-[1.75rem] bg-gradient-to-br from-primary-green via-primary-blue-light to-primary-blue p-[3px] shadow-lg shadow-primary-blue/20">
+                  <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[1.55rem] bg-white text-2xl font-bold text-primary-blue">
+                    {avatarUrl && !avatarFailed ? (
+                      <img
+                        src={avatarUrl}
+                        alt={`${user?.name || 'User'} avatar`}
+                        onError={() => setAvatarFailed(true)}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                </div>
+
+                {uploadingImage && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-[1.75rem] bg-primary-blue/60 text-white">
+                    <Loader2 size={22} className="animate-spin" />
+                  </div>
                 )}
-              </div>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
-                className="hidden"
-                onChange={handleImageSelect}
-              />
-              <button
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                disabled={uploadingImage}
-                title="Upload a new profile photo"
-                aria-label="Upload profile photo"
-                className="absolute -bottom-1 -right-1 bg-white text-primary-blue hover:bg-primary-blue hover:text-white rounded-full p-2 shadow-md transition-colors disabled:opacity-50 disabled:cursor-wait"
-              >
-                {uploadingImage ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
+
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  title="Upload a new profile photo"
+                  aria-label="Upload profile photo"
+                  className="absolute -bottom-1.5 -right-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-primary-blue text-white ring-4 ring-white transition-colors hover:bg-primary-blue-light disabled:cursor-wait disabled:opacity-60"
+                >
                   <Camera size={16} />
-                )}
-              </button>
+                </button>
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="truncate text-2xl font-bold tracking-tight text-primary-blue md:text-3xl">
+                    {user?.name || 'Your profile'}
+                  </h2>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-green/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#5D9626]">
+                    <RoleIcon size={13} />
+                    {roleLabel}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-gray-500">
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Mail size={15} className="shrink-0 text-gray-400" />
+                    <span className="truncate">{user?.email}</span>
+                  </span>
+                  {user?.createdAt && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays size={15} className="text-gray-400" />
+                      Joined {format(new Date(user.createdAt), 'MMM yyyy')}
+                    </span>
+                  )}
+                  {user?.emailVerified && (
+                    <span className="inline-flex items-center gap-1.5 font-medium text-[#5D9626]">
+                      <BadgeCheck size={15} />
+                      Verified
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl md:text-4xl font-bold">{user?.name || 'Your profile'}</h1>
-                <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-semibold capitalize flex items-center gap-1">
-                  <ShieldCheck size={16} />
-                  {user?.role || 'student'}
+
+            <div className="w-full shrink-0 rounded-2xl border border-gray-200/80 bg-gray-50/80 p-4 lg:w-64">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                  Profile setup
+                </span>
+                <span className="text-xs font-bold text-primary-blue">
+                  {completedSteps}/{setupSteps.length}
                 </span>
               </div>
-              <p className="text-gray-100 text-lg mt-1">{user?.email}</p>
-              {user?.createdAt && (
-                <p className="text-white/80 text-sm mt-2 flex items-center gap-1">
-                  <CalendarDays size={16} />
-                  Member since {format(new Date(user.createdAt), 'MMMM yyyy')}
-                </p>
-              )}
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary-green to-primary-blue-light transition-all duration-500"
+                  style={{ width: `${setupPercent}%` }}
+                />
+              </div>
+              <div className="mt-3 space-y-1.5">
+                {setupSteps.map((step) => (
+                  <div
+                    key={step.label}
+                    className={`flex items-center gap-2 text-xs font-medium ${
+                      step.done ? 'text-gray-700' : 'text-gray-400'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                        step.done ? 'bg-primary-green/15 text-[#5D9626]' : 'bg-gray-200 text-gray-400'
+                      }`}
+                    >
+                      <Check size={11} />
+                    </span>
+                    {step.label}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[11px] leading-4 text-gray-500">{setupHint}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Account Details */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 md:p-8">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="bg-primary-blue/10 p-3 rounded-lg">
-                <User className="text-primary-blue" size={24} />
+      {/* Content */}
+      <div className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 sm:px-6 lg:grid-cols-3 lg:px-8">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Account details */}
+          <section className="rounded-[1.75rem] border border-white bg-white p-5 shadow-[0_18px_50px_-30px_rgba(12,57,104,0.35)] md:p-7">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-blue/10 text-primary-blue">
+                <User size={21} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-primary-blue">Account Details</h2>
-                <p className="text-sm text-gray-600">Update your name and email address</p>
+                <h2 className="text-lg font-bold text-primary-blue">Personal information</h2>
+                <p className="mt-0.5 text-sm text-gray-500">
+                  Update the name and email linked to your account.
+                </p>
               </div>
             </div>
 
-            <form className="space-y-5" onSubmit={handleProfileSubmit}>
+            <form className="mt-6 space-y-5" onSubmit={handleProfileSubmit}>
               <div>
-                <label htmlFor="profile-name" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  htmlFor="profile-name"
+                  className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                >
                   Full name
                 </label>
-                <input
-                  id="profile-name"
-                  name="name"
-                  type="text"
-                  value={profile.name}
-                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
-                  placeholder="Your full name"
-                />
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <User className="h-[18px] w-[18px] text-gray-400" />
+                  </div>
+                  <input
+                    id="profile-name"
+                    name="name"
+                    type="text"
+                    value={profile.name}
+                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                    className="block w-full rounded-2xl border border-gray-200 bg-gray-50/80 py-3.5 pl-11 pr-4 text-sm font-medium text-gray-900 transition-all placeholder:text-gray-400 focus:border-primary-blue focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-blue/10"
+                    placeholder="Your full name"
+                  />
+                </div>
               </div>
 
               <div>
-                <label htmlFor="profile-email" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  htmlFor="profile-email"
+                  className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                >
                   Email address
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <Mail className="h-[18px] w-[18px] text-gray-400" />
                   </div>
                   <input
                     id="profile-email"
@@ -288,15 +422,15 @@ const Profile = () => {
                     type="email"
                     value={profile.email}
                     onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-all"
+                    className="block w-full rounded-2xl border border-gray-200 bg-gray-50/80 py-3.5 pl-11 pr-4 text-sm font-medium text-gray-900 transition-all placeholder:text-gray-400 focus:border-primary-blue focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-blue/10"
                     placeholder="you@example.com"
                   />
                 </div>
-                <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
                   {user?.emailVerified ? (
                     <>
-                      <BadgeCheck className="text-primary-green" size={14} />
-                      Email verified
+                      <BadgeCheck size={14} className="text-primary-green" />
+                      Your email is verified.
                     </>
                   ) : (
                     'Changing your email keeps your account active without re-verification.'
@@ -304,112 +438,232 @@ const Profile = () => {
                 </p>
               </div>
 
-              <button
-                type="submit"
-                disabled={savingProfile || !isProfileDirty}
-                className="inline-flex items-center space-x-2 bg-primary-blue hover:bg-primary-blue-light text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {savingProfile ? (
-                  <span>Saving...</span>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    <span>Save Changes</span>
-                  </>
-                )}
-              </button>
+              <div className="flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-gray-400">
+                  {isProfileDirty ? 'You have unsaved changes.' : 'Everything is up to date.'}
+                </p>
+                <button
+                  type="submit"
+                  disabled={savingProfile || !isProfileDirty}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-blue/15 transition-all hover:-translate-y-0.5 hover:bg-primary-blue-light hover:shadow-xl disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {savingProfile ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      Save changes
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
-          </div>
+          </section>
 
-          {/* Change Password */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 md:p-8">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="bg-primary-green/10 p-3 rounded-lg">
-                <Lock className="text-primary-green" size={24} />
+          {/* Security */}
+          <section className="rounded-[1.75rem] border border-white bg-white p-5 shadow-[0_18px_50px_-30px_rgba(12,57,104,0.35)] md:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-green/10 text-[#5D9626]">
+                  <KeyRound size={21} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-primary-blue">Password &amp; security</h2>
+                  <p className="mt-0.5 text-sm text-gray-500">
+                    Choose a unique password you do not use elsewhere.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-primary-blue">Change Password</h2>
-                <p className="text-sm text-gray-600">Use at least 6 characters</p>
-              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPasswords((show) => !show)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary-blue/20 hover:text-primary-blue"
+              >
+                {showPasswords ? <EyeOff size={14} /> : <Eye size={14} />}
+                {showPasswords ? 'Hide' : 'Show'}
+              </button>
             </div>
 
-            <form className="space-y-5" onSubmit={handlePasswordSubmit}>
+            <form className="mt-6 space-y-5" onSubmit={handlePasswordSubmit}>
               <PasswordField
                 id="current-password"
                 label="Current password"
                 value={passwords.current}
                 onChange={(value) => setPasswords({ ...passwords, current: value })}
                 show={showPasswords}
-              />
-              <PasswordField
-                id="new-password"
-                label="New password"
-                value={passwords.next}
-                onChange={(value) => setPasswords({ ...passwords, next: value })}
-                show={showPasswords}
-              />
-              <PasswordField
-                id="confirm-password"
-                label="Confirm new password"
-                value={passwords.confirm}
-                onChange={(value) => setPasswords({ ...passwords, confirm: value })}
-                show={showPasswords}
+                autoComplete="current-password"
               />
 
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords(!showPasswords)}
-                  className="inline-flex items-center space-x-1.5 text-sm font-medium text-gray-600 hover:text-primary-blue transition-colors"
-                >
-                  {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
-                  <span>{showPasswords ? 'Hide passwords' : 'Show passwords'}</span>
-                </button>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <PasswordField
+                  id="new-password"
+                  label="New password"
+                  value={passwords.next}
+                  onChange={(value) => setPasswords({ ...passwords, next: value })}
+                  show={showPasswords}
+                  autoComplete="new-password"
+                />
+                <PasswordField
+                  id="confirm-password"
+                  label="Confirm new password"
+                  value={passwords.confirm}
+                  onChange={(value) => setPasswords({ ...passwords, confirm: value })}
+                  show={showPasswords}
+                  autoComplete="new-password"
+                />
+              </div>
 
+              <div className="flex flex-wrap gap-2">
+                <PasswordRequirement met={passwordLongEnough}>At least 6 characters</PasswordRequirement>
+                <PasswordRequirement met={passwordsMatch}>Passwords match</PasswordRequirement>
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="max-w-xs text-xs text-gray-400">
+                  Updating your password keeps you signed in on this device.
+                </p>
                 <button
                   type="submit"
                   disabled={savingPassword}
-                  className="inline-flex items-center space-x-2 bg-primary-green hover:bg-primary-green/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-green px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-green/20 transition-all hover:-translate-y-0.5 hover:bg-primary-green/90 hover:shadow-xl disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {savingPassword ? (
-                    <span>Updating...</span>
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Updating...
+                    </>
                   ) : (
                     <>
-                      <Save size={18} />
-                      <span>Update Password</span>
+                      <Save size={16} />
+                      Update password
                     </>
                   )}
                 </button>
               </div>
             </form>
-          </div>
+          </section>
         </div>
+
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <section className="rounded-[1.75rem] border border-white bg-white p-5 shadow-[0_18px_50px_-30px_rgba(12,57,104,0.35)]">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+              Account overview
+            </h2>
+            <dl className="mt-4 space-y-4">
+              <OverviewRow icon={ShieldCheck} label="Role" value={roleLabel} />
+              <OverviewRow
+                icon={BadgeCheck}
+                label="Email status"
+                value={user?.emailVerified ? 'Verified' : 'Not verified'}
+                tone={user?.emailVerified ? 'success' : 'muted'}
+              />
+              <OverviewRow
+                icon={CalendarDays}
+                label="Member since"
+                value={user?.createdAt ? format(new Date(user.createdAt), 'MMMM yyyy') : '—'}
+              />
+            </dl>
+          </section>
+
+          <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary-blue to-[#082744] p-5 text-white shadow-xl shadow-primary-blue/20">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.12]"
+              style={{
+                backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
+                backgroundSize: '18px 18px'
+              }}
+            />
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                <Sparkles size={15} className="text-primary-green" />
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">
+                  Explore
+                </h2>
+              </div>
+
+              <div className="mt-4 space-y-1">
+                <QuickLink to="/dashboard/orders" icon={Package} label="My orders" />
+                <QuickLink to="/dashboard/support" icon={MessageSquare} label="Support requests" />
+                <QuickLink to="/projects" icon={Compass} label="Browse projects" />
+              </div>
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
 };
 
-const PasswordField = ({ id, label, value, onChange, show }) => (
+const PasswordField = ({ id, label, value, onChange, show, autoComplete }) => (
   <div>
-    <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-2">
+    <label htmlFor={id} className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
       {label}
     </label>
     <div className="relative">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <Lock className="h-5 w-5 text-gray-400" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+        <Lock className="h-[18px] w-[18px] text-gray-400" />
       </div>
       <input
         id={id}
         name={id}
         type={show ? 'text' : 'password'}
-        autoComplete="current-password"
+        autoComplete={autoComplete}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-green focus:border-transparent transition-all"
+        className="block w-full rounded-2xl border border-gray-200 bg-gray-50/80 py-3.5 pl-11 pr-4 text-sm font-medium text-gray-900 transition-all placeholder:text-gray-400 focus:border-primary-blue focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-blue/10"
         placeholder="••••••••"
       />
     </div>
   </div>
+);
+
+const PasswordRequirement = ({ met, children }) => (
+  <span
+    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+      met ? 'bg-primary-green/10 text-[#5D9626]' : 'bg-gray-100 text-gray-500'
+    }`}
+  >
+    <Check size={12} className={met ? 'text-primary-green' : 'text-gray-400'} />
+    {children}
+  </span>
+);
+
+const OverviewRow = ({ icon: Icon, label, value, tone = 'default' }) => (
+  <div className="flex items-center gap-3">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400">
+      <Icon size={16} />
+    </div>
+    <div className="min-w-0 flex-1">
+      <dt className="text-xs text-gray-400">{label}</dt>
+      <dd
+        className={`truncate text-sm font-semibold capitalize ${
+          tone === 'success' ? 'text-[#5D9626]' : 'text-gray-800'
+        }`}
+      >
+        {value}
+      </dd>
+    </div>
+  </div>
+);
+
+const QuickLink = ({ to, icon: Icon, label }) => (
+  <Link
+    to={to}
+    className="group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+  >
+    <span className="inline-flex items-center gap-2.5">
+      <Icon size={16} className="text-primary-green" />
+      {label}
+    </span>
+    <ArrowUpRight
+      size={15}
+      className="opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+    />
+  </Link>
 );
 
 export default Profile;
